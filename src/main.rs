@@ -1,6 +1,6 @@
 use crate::structs::WsMessage;
 use fastwebsockets::upgrade::upgrade;
-use fastwebsockets::{FragmentCollector, OpCode};
+use fastwebsockets::{FragmentCollector, OpCode, WebSocketError};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::upgrade::Upgraded;
@@ -11,6 +11,7 @@ use std::sync::Arc;
 use structs::{SharedState, State};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
+use anyhow::Result;
 
 mod structs;
 
@@ -18,7 +19,7 @@ async fn handle_ws(
     mut ws: FragmentCollector<Upgraded>,
     client_addr: SocketAddr,
     state: SharedState,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(), WebSocketError> {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     {
         let mut state = state.write().await;
@@ -69,7 +70,7 @@ async fn request_handler(
     mut req: Request<Body>,
     client_addr: SocketAddr,
     state: SharedState,
-) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Response<Body>> {
     let uri = req.uri().to_string();
     let uri = uri.as_str();
 

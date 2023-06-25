@@ -79,8 +79,7 @@ dependencies = [
 [[package]]
 name = "fastwebsockets"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4440d134c17a95fdfc10f3fc29eaeae0f678ed985cc46b7f5fd8b0e2d5c05be3"
+source = "git+https://github.com/denoland/fastwebsockets.git#875e6b7ba001898e38bbff50e8f90cc11b90e718"
 dependencies = [
  "base64",
  "hyper",
@@ -88,6 +87,7 @@ dependencies = [
  "rand",
  "sha1",
  "simdutf8",
+ "thiserror",
  "tokio",
  "utf-8",
 ]
@@ -451,6 +451,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978c9a314bd8dc99be594bc3c175faaa9794be04a5a5e153caba6915336cebac"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
