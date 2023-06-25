@@ -8,20 +8,20 @@ use hyper::{Body, Request, Response};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use structs::State;
+use structs::{SharedState, State};
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 mod structs;
 
 async fn handle_ws(
     mut ws: FragmentCollector<Upgraded>,
     client_addr: SocketAddr,
-    state: Arc<Mutex<State>>,
+    state: SharedState,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     {
-        let mut state = state.lock().await;
+        let mut state = state.write().await;
         state.clients.insert(client_addr, tx);
     }
 
@@ -37,11 +37,11 @@ async fn handle_ws(
                     }
                     OpCode::Text => {
                         let text = String::from_utf8(frame.payload.to_vec()).unwrap();
-                        state.lock().await.broadcast(&client_addr, WsMessage::Text(text)).await;
+                        state.read().await.broadcast(&client_addr, WsMessage::Text(text)).await;
                         //ws.write_frame(frame).await?;
                     }
                     OpCode::Binary => {
-                        state.lock().await.broadcast(&client_addr, WsMessage::Binary(frame.payload.to_vec())).await;
+                        state.read().await.broadcast(&client_addr, WsMessage::Binary(frame.payload.to_vec())).await;
                         //ws.write_frame(frame).await?;
                     }
                     _ => {}
@@ -58,7 +58,7 @@ async fn handle_ws(
     }
 
     {
-        let mut state = state.lock().await;
+        let mut state = state.write().await;
         state.clients.remove(&client_addr);
     }
 
@@ -68,7 +68,7 @@ async fn handle_ws(
 async fn request_handler(
     mut req: Request<Body>,
     client_addr: SocketAddr,
-    state: Arc<Mutex<State>>,
+    state: SharedState,
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
     let uri = req.uri().to_string();
     let uri = uri.as_str();
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], 1234));
     let listener = TcpListener::bind(addr).await?;
 
-    let state = Arc::new(Mutex::new(State {
+    let state = Arc::new(RwLock::new(State {
         clients: HashMap::new(),
     }));
 

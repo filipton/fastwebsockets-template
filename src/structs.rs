@@ -1,7 +1,24 @@
-use std::{net::SocketAddr, collections::HashMap};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use fastwebsockets::Frame;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{mpsc::UnboundedSender, RwLock};
+
+pub type Tx = UnboundedSender<WsMessage>;
+pub type SharedState = Arc<RwLock<State>>;
+
+pub struct State {
+    pub clients: HashMap<SocketAddr, Tx>,
+}
+
+impl State {
+    pub async fn broadcast(&self, sender: &SocketAddr, msg: WsMessage) {
+        for (addr, tx) in self.clients.iter() {
+            if addr != sender {
+                tx.send(msg.clone()).unwrap();
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
@@ -26,21 +43,6 @@ impl WsMessage {
             WsMessage::Binary(data) => Frame::binary(data.as_slice().into()),
             WsMessage::Pong(data) => Frame::pong(data.as_slice().into()),
             WsMessage::Close(code, reason) => Frame::close(*code, reason.as_bytes()),
-        }
-    }
-}
-
-type Tx = UnboundedSender<WsMessage>;
-pub struct State {
-    pub clients: HashMap<SocketAddr, Tx>,
-}
-
-impl State {
-    pub async fn broadcast(&self, sender: &SocketAddr, msg: WsMessage) {
-        for (addr, tx) in self.clients.iter() {
-            if addr != sender {
-                tx.send(msg.clone()).unwrap();
-            }
         }
     }
 }
