@@ -4,6 +4,7 @@ use fastwebsockets::Frame;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub enum WsMessage {
     Text(String),
     Binary(Vec<u8>),
