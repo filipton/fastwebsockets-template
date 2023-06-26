@@ -71,8 +71,7 @@ async fn request_handler(
     client_addr: SocketAddr,
     state: SharedState,
 ) -> Result<Response<Body>> {
-    let uri = req.uri().to_string();
-    let uri = uri.as_str();
+    let uri = req.uri().path();
 
     match uri {
         "/ws" => {
