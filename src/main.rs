@@ -1,4 +1,5 @@
 use crate::structs::WsMessage;
+use anyhow::Result;
 use fastwebsockets::upgrade::upgrade;
 use fastwebsockets::{FragmentCollector, OpCode, WebSocketError};
 use hyper::server::conn::Http;
@@ -11,14 +12,13 @@ use std::sync::Arc;
 use structs::{SharedState, State};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
-use anyhow::Result;
 
 mod structs;
 
 async fn handle_ws(
     mut ws: FragmentCollector<Upgraded>,
     client_addr: SocketAddr,
-    state: SharedState,
+    state: &SharedState,
 ) -> Result<(), WebSocketError> {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     {
@@ -58,11 +58,6 @@ async fn handle_ws(
         }
     }
 
-    {
-        let mut state = state.write().await;
-        state.clients.remove(&client_addr);
-    }
-
     Ok(())
 }
 
@@ -79,7 +74,12 @@ async fn request_handler(
 
             tokio::spawn(async move {
                 let ws = fastwebsockets::FragmentCollector::new(fut.await.unwrap());
-                handle_ws(ws, client_addr, state).await.unwrap();
+                handle_ws(ws, client_addr, &state).await.unwrap();
+
+                {
+                    let mut state = state.write().await;
+                    state.clients.remove(&client_addr);
+                }
             });
 
             return Ok(response);
@@ -93,8 +93,10 @@ async fn request_handler(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = SocketAddr::from(([0, 0, 0, 0], 1234));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     let listener = TcpListener::bind(addr).await?;
+
+    println!("Listening on {}", addr);
 
     let state = Arc::new(RwLock::new(State {
         clients: HashMap::new(),
